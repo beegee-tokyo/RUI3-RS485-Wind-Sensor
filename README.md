@@ -1,5 +1,7 @@
 # RUI3-RS485-Wind-Sensor
-<center><img src="./assets/RAK-Whirls.png" alt="RAKWireless">&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp<img src="./assets/rakstar.jpg" alt="RAKstar" ></center>
+<center><img src="./assets/RAK-Whirls.png" alt="RAKWireless" width="25%" >&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp<img src="./assets/rakstar.jpg" alt="RAKstar" width="25%" ></center>
+
+
 Example for a RS485 wind sensor using RAKwireless RUI3 on a RAK3172.
 
 Works with the Rika RK900-09 sensor.    
