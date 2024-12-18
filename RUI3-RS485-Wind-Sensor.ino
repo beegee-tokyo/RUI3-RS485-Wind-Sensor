@@ -209,7 +209,7 @@ void setup()
 	// Initialize the Modbus interface on Serial1 (connected to RAK5802 RS485 module)
 	pinMode(WB_IO2, OUTPUT);
 	digitalWrite(WB_IO2, HIGH);
-	Serial1.begin(4800); // baud-rate at 4800
+	Serial1.begin(9600); // baud-rate at 9600
 	master.start();
 	master.setTimeOut(2000); // if there is no answer in 2000 ms, roll over
 
@@ -227,13 +227,6 @@ void setup()
 		digitalWrite(LED_BLUE, LOW);
 		MYLOG("SETUP", "P2P mode, start a reading");
 		modbus_read_register(NULL);
-	}
-	else
-	{
-		// // Shut down 12V supply and RS485
-		// digitalWrite(WB_IO2, LOW);
-		// Serial1.end();
-		// udrv_serial_deinit(SERIAL_UART1);
 	}
 
 	if (api.lorawan.nwm.get() == 1)
@@ -312,43 +305,55 @@ void modbus_read_register(void *)
 			}
 			else
 			{
-				MYLOG("MODR", "Windspeed = %.2f", (uint16_t)(coils_n_regs.sensor_data.reg_1) / 100); // Windspeed
-				MYLOG("MODR", "Wind direction = %d", (uint16_t)(coils_n_regs.sensor_data.reg_2)); // Wind direction
-				MYLOG("MODR", "Temperature = %.2f", (uint16_t)(coils_n_regs.sensor_data.reg_3) / 10.0);  // Temperature
-				MYLOG("MODR", "Humidity = %.2f", (uint16_t)(coils_n_regs.sensor_data.reg_4) / 10.0); // Humidity
-				MYLOG("MODR", "Barometer = %.2f", (uint16_t)(coils_n_regs.sensor_data.reg_5) / 10.0); // Barometric Pressure
-
-				data_ready = true;
-
-				// Clear payload
-				g_solution_data.reset();
-
-				// Add temperature level to payload
-				g_solution_data.addTemperature(LPP_CHANNEL_TEMP, coils_n_regs.sensor_data.reg_3 / 10.0);
-
-				// Add humidity level to payload
-				g_solution_data.addRelativeHumidity(LPP_CHANNEL_HUMID, (uint16_t)(coils_n_regs.sensor_data.reg_4) / 10.0);
-
-				// Add barometric pressure value to payload
-				g_solution_data.addBarometricPressure(LPP_CHANNEL_BARO, (uint16_t)(coils_n_regs.sensor_data.reg_5) / 10.0);
-
-				// Add wind speed value to payload
-				g_solution_data.addAnalogOutput(LPP_CHANNEL_WINDS, (uint16_t)(coils_n_regs.sensor_data.reg_1) / 100);
-
-				// Add wind direction to payload
-				g_solution_data.addGenericSensor(LPP_CHANNEL_WINDD, (uint16_t)(coils_n_regs.sensor_data.reg_2));
-
-				float battery_reading = 0.0;
-				// Add battery voltage
-				for (int i = 0; i < 10; i++)
+				if ((uint16_t)(coils_n_regs.sensor_data.reg_2) > 360)
 				{
-					battery_reading += api.system.bat.get(); // get battery voltage
+					// Wind direction can be only between 0 and 360 degrees. ==> Discard the data
+					MYLOG("MODR", "Invalid data");
+					MYLOG("MODR", "Windspeed = %.2f", (uint16_t)(coils_n_regs.sensor_data.reg_1) / 100);	// Windspeed
+					MYLOG("MODR", "Wind direction = %d", (uint16_t)(coils_n_regs.sensor_data.reg_2));		// Wind direction
+					MYLOG("MODR", "Temperature = %.2f", (uint16_t)(coils_n_regs.sensor_data.reg_3) / 10.0); // Temperature
+					MYLOG("MODR", "Humidity = %.2f", (uint16_t)(coils_n_regs.sensor_data.reg_4) / 10.0);	// Humidity
+					MYLOG("MODR", "Barometer = %.2f", (uint16_t)(coils_n_regs.sensor_data.reg_5) / 10.0);	// Barometric Pressure
 				}
+				else
+				{
+					MYLOG("MODR", "Windspeed = %.2f", (uint16_t)(coils_n_regs.sensor_data.reg_1) / 100);	// Windspeed
+					MYLOG("MODR", "Wind direction = %d", (uint16_t)(coils_n_regs.sensor_data.reg_2));		// Wind direction
+					MYLOG("MODR", "Temperature = %.2f", (uint16_t)(coils_n_regs.sensor_data.reg_3) / 10.0); // Temperature
+					MYLOG("MODR", "Humidity = %.2f", (uint16_t)(coils_n_regs.sensor_data.reg_4) / 10.0);	// Humidity
+					MYLOG("MODR", "Barometer = %.2f", (uint16_t)(coils_n_regs.sensor_data.reg_5) / 10.0);	// Barometric Pressure
 
-				battery_reading = battery_reading / 10;
+					data_ready = true;
 
-				g_solution_data.addVoltage(LPP_CHANNEL_BATT, battery_reading);
+					// Clear payload
+					g_solution_data.reset();
 
+					// Add temperature level to payload
+					g_solution_data.addTemperature(LPP_CHANNEL_TEMP, coils_n_regs.sensor_data.reg_3 / 10.0);
+
+					// Add humidity level to payload
+					g_solution_data.addRelativeHumidity(LPP_CHANNEL_HUMID, (uint16_t)(coils_n_regs.sensor_data.reg_4) / 10.0);
+
+					// Add barometric pressure value to payload
+					g_solution_data.addBarometricPressure(LPP_CHANNEL_BARO, (uint16_t)(coils_n_regs.sensor_data.reg_5) / 10.0);
+
+					// Add wind speed value to payload
+					g_solution_data.addAnalogOutput(LPP_CHANNEL_WINDS, (uint16_t)(coils_n_regs.sensor_data.reg_1) / 100);
+
+					// Add wind direction to payload
+					g_solution_data.addGenericSensor(LPP_CHANNEL_WINDD, (uint16_t)(coils_n_regs.sensor_data.reg_2));
+
+					float battery_reading = 0.0;
+					// Add battery voltage
+					for (int i = 0; i < 10; i++)
+					{
+						battery_reading += api.system.bat.get(); // get battery voltage
+					}
+
+					battery_reading = battery_reading / 10;
+
+					g_solution_data.addVoltage(LPP_CHANNEL_BATT, battery_reading);
+				}
 				break;
 			}
 		}
@@ -359,10 +364,7 @@ void modbus_read_register(void *)
 		// Send the packet if data was received
 		send_packet();
 	}
-	// // Shut down sensors and communication for lowest power consumption
-	// digitalWrite(WB_IO2, LOW);
-	// Serial1.end();
-	// udrv_serial_deinit(SERIAL_UART1);
+
 	digitalWrite(LED_BLUE, LOW);
 }
 
